@@ -62,26 +62,21 @@ Renters default at higher rates than homeowners. Small business loans carry the 
 
 | Model               | ROC-AUC |
 | ------------------- | ------- |
-| Logistic Regression | 0.948   |
-| Random Forest       | 0.948   |
+| Logistic Regression | 0.719   |
+| Random Forest       | 0.715   |
+| Gradient Boosting   | 0.726   |
 
 ### ROC Curve Comparison
 
 ![ROC Comparison](images/05_01output.png)
 
-Both models achieve near-identical performance, with the curves nearly overlapping.
-
-### Confusion Matrix
-
-![Confusion Matrix](images/05_output.png)
-
-The model identifies 89% of defaults while maintaining acceptable false positive rates.
+Gradient Boosting slightly outperforms other models. All three achieve similar performance in the 0.71-0.73 range, which is realistic for credit risk prediction without data leakage.
 
 ### Feature Importance
 
 ![Feature Importance](images/0502output.png)
 
-FICO score range dominates feature importance, followed by interest rate and sub-grade. This aligns with industry practice where credit scores are primary risk indicators.
+Sub-grade and interest rate dominate feature importance, followed by loan term and loan-to-income ratio. Origination FICO scores contribute modestly, indicating that LendingClub's internal grading system captures most credit risk signal.
 
 ## Project Structure
 
@@ -147,10 +142,10 @@ result = scorer.predict({
 
 ## Key Takeaways
 
-1. **Data leakage prevention** - Removed post-origination features that would not be available at loan decision time
+1. **Data leakage prevention** - Removed post-origination features (last FICO scores, payment history) that would not be available at loan decision time
 2. **Class imbalance handling** - Applied balanced class weights to improve minority class detection
-3. **Model interpretability** - Logistic regression performed comparably to ensemble methods while offering coefficient transparency
-4. **FICO dominance** - Credit score ranges are by far the strongest predictors, validating industry reliance on credit bureaus
+3. **Sub-grade signal** - LendingClub's internal grading system captures most predictive signal, outperforming raw FICO scores
+4. **Realistic performance** - ROC-AUC of 0.72 reflects production-accurate predictions without information leakage
 
 ## Stack
 
