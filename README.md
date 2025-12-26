@@ -93,11 +93,12 @@ risk_modeling/
 │   └── api/
 │       └── risk_scorer.py  # Scoring API
 ├── data/
-│   ├── raw/
-│   ├── interim/
-│   └── processed/
+│   ├── raw/                # Raw LendingClub data
+│   ├── interim/            # Cleaned data
+│   └── processed/          # Feature-engineered data
 ├── models/
-│   └── trained/
+│   ├── trained/            # Saved models and feature names
+│   └── scalers/            # StandardScaler for preprocessing
 └── requirements.txt
 ```
 
@@ -122,23 +123,36 @@ from src.api.risk_scorer import CreditRiskScorer
 
 scorer = CreditRiskScorer()
 result = scorer.predict({
+    # Required fields
     "loan_amnt": 20000,
     "annual_inc": 80000,
-    "int_rate": 12.5,
     "dti": 15.5,
+    "installment": 665.0,
+    # Recommended fields for better predictions
+    "term": " 36 months",
+    "int_rate": 12.5,
     "grade": "B",
     "home_ownership": "RENT",
-    "purpose": "debt_consolidation"
+    "purpose": "debt_consolidation",
+    "revol_bal": 12000,
+    "revol_util": 45.0,
 })
 
 # Output:
 # {
-#     "risk_score": 42,
+#     "risk_score": 45,
 #     "decision": "MANUAL_REVIEW",
-#     "default_probability": 0.42,
-#     "confidence": "HIGH"
+#     "default_probability": 0.4588,
+#     "confidence": "LOW"
 # }
 ```
+
+**Required fields:** `loan_amnt`, `annual_inc`, `dti`, `installment`
+
+**Decision thresholds:**
+- APPROVE: risk_score <= 30
+- MANUAL_REVIEW: 30 < risk_score <= 60
+- REJECT: risk_score > 60
 
 ## Key Takeaways
 
