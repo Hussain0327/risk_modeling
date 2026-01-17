@@ -82,6 +82,36 @@ class CreditRiskScorer:
                 "Run notebooks 01-05 to save feature names."
             )
 
+    @classmethod
+    def health_check(cls, model_path: str = None, scaler_path: str = None) -> Dict[str, Any]:
+        """
+        Check if model files exist and are loadable.
+
+        Use this method to verify the scorer is ready before instantiation.
+
+        Args:
+            model_path: Optional custom model path to check.
+            scaler_path: Optional custom scaler path to check.
+
+        Returns:
+            Dict with 'healthy' bool and 'details' dict of file statuses.
+        """
+        base_path = Path(__file__).parent.parent.parent / "models"
+        model_path = Path(model_path) if model_path else base_path / "trained/credit_risk_model.joblib"
+        scaler_path = Path(scaler_path) if scaler_path else base_path / "scalers/standard_scaler.joblib"
+        features_path = base_path / "trained/feature_names.joblib"
+
+        status = {
+            'model': model_path.exists(),
+            'scaler': scaler_path.exists(),
+            'features': features_path.exists(),
+        }
+
+        return {
+            'healthy': all(status.values()),
+            'details': status
+        }
+
     def preprocess_input(self, borrower_profile: Dict[str, Any]) -> pd.DataFrame:
         """
         Convert borrower profile to model-ready features.
@@ -173,12 +203,23 @@ class CreditRiskScorer:
         else:
             return "REJECT"
 
+    def _validate_numeric(self, value: Any, field_name: str) -> None:
+        """
+        Validate that a value is numeric (int or float).
+
+        Raises:
+            TypeError: If value is not numeric.
+        """
+        if not isinstance(value, (int, float)) or isinstance(value, bool):
+            raise TypeError(f"{field_name} must be numeric, got {type(value).__name__}")
+
     def validate_input(self, borrower_profile: Dict[str, Any]) -> None:
         """
         Validate borrower profile has required fields with valid values.
 
         Raises:
             ValueError: If required fields are missing or invalid.
+            TypeError: If fields have wrong types.
         """
         missing_fields = []
         invalid_fields = []
@@ -189,19 +230,38 @@ class CreditRiskScorer:
             elif borrower_profile[field] is None:
                 invalid_fields.append(f"{field} (cannot be None)")
 
-        # Validate numeric ranges
-        if 'loan_amnt' in borrower_profile:
+        # Validate numeric ranges with type checking
+        if 'loan_amnt' in borrower_profile and borrower_profile['loan_amnt'] is not None:
+            self._validate_numeric(borrower_profile['loan_amnt'], 'loan_amnt')
             if borrower_profile['loan_amnt'] <= 0:
                 invalid_fields.append("loan_amnt (must be positive)")
 
-        if 'annual_inc' in borrower_profile:
-            if borrower_profile['annual_inc'] < 0:
-                invalid_fields.append("annual_inc (cannot be negative)")
+        if 'annual_inc' in borrower_profile and borrower_profile['annual_inc'] is not None:
+            self._validate_numeric(borrower_profile['annual_inc'], 'annual_inc')
+            if borrower_profile['annual_inc'] <= 0:
+                invalid_fields.append("annual_inc (must be positive)")
 
-        if 'dti' in borrower_profile:
+        if 'dti' in borrower_profile and borrower_profile['dti'] is not None:
+            self._validate_numeric(borrower_profile['dti'], 'dti')
             dti = borrower_profile['dti']
-            if dti < 0:
-                invalid_fields.append("dti (cannot be negative)")
+            if dti < 0 or dti > 100:
+                invalid_fields.append("dti (must be between 0 and 100)")
+
+        if 'installment' in borrower_profile and borrower_profile['installment'] is not None:
+            self._validate_numeric(borrower_profile['installment'], 'installment')
+            if borrower_profile['installment'] <= 0:
+                invalid_fields.append("installment (must be positive)")
+
+        # Validate optional numeric fields
+        if 'revol_util' in borrower_profile and borrower_profile['revol_util'] is not None:
+            self._validate_numeric(borrower_profile['revol_util'], 'revol_util')
+            if borrower_profile['revol_util'] < 0:
+                invalid_fields.append("revol_util (cannot be negative)")
+
+        if 'revol_bal' in borrower_profile and borrower_profile['revol_bal'] is not None:
+            self._validate_numeric(borrower_profile['revol_bal'], 'revol_bal')
+            if borrower_profile['revol_bal'] < 0:
+                invalid_fields.append("revol_bal (cannot be negative)")
 
         error_messages = []
         if missing_fields:
